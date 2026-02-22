@@ -1,0 +1,30 @@
+# Ignore training dataset
+Data/
+
+# Ignore training outputs
+results/
+runs/
+
+# Ignore trained weights
+*.pt
+*.onnx
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Virtual env
+venv/
+env/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
