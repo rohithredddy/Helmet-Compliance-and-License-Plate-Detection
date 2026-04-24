@@ -1,9 +1,26 @@
+# Core ML
 torch>=2.0.0
 ultralytics>=8.0.0
 optuna>=3.0.0
-opencv-python>=4.8.0
-matplotlib>=3.7.0
+
+# Computer Vision
+opencv-python-headless>=4.8.0
+Pillow>=10.0.0
+
+# Data Science
 numpy>=1.23.0
 pandas>=1.5.0
+matplotlib>=3.7.0
 plotly>=5.15.0
 tqdm>=4.65.0
+scipy>=1.10.0
+
+# Snowflake
+snowflake-connector-python>=3.6.0
+
+# Streamlit
+streamlit>=1.30.0
+
+# Utilities
+python-dotenv>=1.0.0
+pyyaml>=6.0.0

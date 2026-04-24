@@ -1,11 +1,13 @@
-# Ignore training dataset
+# Environment variables
+.env
+
+# Ignore training dataset (large)
 Data/
 
 # Ignore training outputs
-results/
 runs/
 
-# Ignore trained weights
+# Ignore trained weights (large binary)
 *.pt
 *.onnx
 
@@ -13,6 +15,9 @@ runs/
 __pycache__/
 *.pyc
 *.pyo
+*.egg-info/
+dist/
+build/
 
 # Virtual env
 venv/
@@ -28,3 +33,17 @@ env/
 # OS
 .DS_Store
 Thumbs.db
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Temporary inference outputs
+temp_outputs/
+
+# Ignore src directory
+src/
+
+# Explicitly track the results folder and its weights
+!results/
+!results/**/*.pt
+!results/**/*.onnx

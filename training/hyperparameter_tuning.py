@@ -1,32 +1,54 @@
+"""
+Hyperparameter tuning using Optuna with Snowflake logging.
+Refactored from the original src/training.py Optuna logic.
+"""
+
+import sys
+import logging
+from pathlib import Path
+
 import torch
 import optuna
-from ultralytics import YOLO
 from optuna.pruners import MedianPruner
+from ultralytics import YOLO
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from config.settings import Settings
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logger = logging.getLogger(__name__)
 
 
 def run_optuna_tuning(
-    data_yaml,
-    base_model="yolov8m.pt",
-    epochs_tune=30,
-    img_size=960,
-    batch_size=8,
-    n_trials=15,
+    data_yaml=None,
+    base_model=None,
+    epochs_tune=None,
+    img_size=None,
+    batch_size=None,
+    n_trials=None,
     device=None,
 ):
     """
-    Runs Optuna hyperparameter tuning for YOLOv8.
-    Returns study object.
+    Run Optuna hyperparameter tuning for YOLOv8.
+
+    Returns:
+        optuna.Study object with best trial results.
     """
+    data_yaml = str(data_yaml or Settings.DATA_YAML)
+    base_model = base_model or Settings.BASE_MODEL
+    epochs_tune = epochs_tune or Settings.TUNING_EPOCHS
+    img_size = img_size or Settings.IMAGE_SIZE
+    batch_size = batch_size or Settings.BATCH_SIZE
+    n_trials = n_trials or Settings.TUNING_TRIALS
 
     if device is None:
         device = 0 if torch.cuda.is_available() else "cpu"
 
-    print("Device:", device)
-    if torch.cuda.is_available():
-        print("GPU:", torch.cuda.get_device_name(0))
+    logger.info("Starting Optuna tuning: %d trials, %d epochs each", n_trials, epochs_tune)
+    logger.info("Device: %s", device)
 
     def objective(trial):
-
         params = {
             "lr0": trial.suggest_float("lr0", 1e-4, 3e-3, log=True),
             "weight_decay": trial.suggest_float("weight_decay", 1e-5, 5e-3, log=True),
@@ -54,7 +76,7 @@ def run_optuna_tuning(
                 amp=True,
                 verbose=False,
                 plots=False,
-                **params
+                **params,
             )
 
             metrics = model.val()
@@ -64,73 +86,23 @@ def run_optuna_tuning(
             return map5095
 
         except Exception as e:
-            print("Trial failed:", e)
+            logger.warning("Trial %d failed: %s", trial.number, e)
             return 0.0
 
     study = optuna.create_study(
         direction="maximize",
-        pruner=MedianPruner(n_warmup_steps=5)
+        pruner=MedianPruner(n_warmup_steps=5),
     )
 
     study.optimize(objective, n_trials=n_trials)
 
-    print("\nBest Trial:")
-    print("mAP50-95:", study.best_trial.value)
-    print("Best Params:", study.best_trial.params)
+    logger.info("Best Trial:")
+    logger.info("  mAP50-95: %.4f", study.best_trial.value)
+    logger.info("  Best Params: %s", study.best_trial.params)
 
     return study
 
 
-def run_final_training(
-    data_yaml,
-    best_params,
-    base_model="yolov8m.pt",
-    epochs_final=120,
-    img_size=960,
-    batch_size=8,
-    experiment_name="optuna_final",
-    device=None,
-):
-    """
-    Runs final training using best Optuna parameters.
-    """
-
-    if device is None:
-        device = 0 if torch.cuda.is_available() else "cpu"
-
-    final_model = YOLO(base_model)
-
-    final_model.train(
-        data=data_yaml,
-        epochs=epochs_final,
-        imgsz=img_size,
-        batch=batch_size,
-        device=device,
-        optimizer="AdamW",
-        cos_lr=True,
-        patience=20,
-        amp=True,
-        name=experiment_name,
-        plots=True,
-        **best_params
-    )
-
-    print("Final Training Complete.")
-
-    return final_model
-
-
-# Optional CLI usage
 if __name__ == "__main__":
-
-    DATA_YAML = "Dataset_helmet_resplit/data.yaml"
-
-    study = run_optuna_tuning(
-        data_yaml=DATA_YAML,
-        base_model="yolov8m.pt"
-    )
-
-    run_final_training(
-        data_yaml=DATA_YAML,
-        best_params=study.best_trial.params
-    )
+    study = run_optuna_tuning()
+    print("Best params:", study.best_trial.params)
